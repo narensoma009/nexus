@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, DateTime, Text
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, ForeignKey, DateTime, Text, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -9,7 +8,7 @@ from app.models.base import Base
 
 class Account(Base):
     __tablename__ = "accounts"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     portfolios: Mapped[list["Portfolio"]] = relationship(back_populates="account")
@@ -17,7 +16,7 @@ class Account(Base):
 
 class Portfolio(Base):
     __tablename__ = "portfolios"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id"))
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -32,7 +31,7 @@ class Portfolio(Base):
 
 class SubPortfolio(Base):
     __tablename__ = "sub_portfolios"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     portfolio_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("portfolios.id"))
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -43,7 +42,7 @@ class SubPortfolio(Base):
 class Team(Base):
     """Recursive — a team can have a parent team (sub-teams)."""
     __tablename__ = "teams"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255))
     portfolio_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("portfolios.id"), nullable=True)
     sub_portfolio_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("sub_portfolios.id"), nullable=True)

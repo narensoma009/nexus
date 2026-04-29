@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     OLLAMA_MODEL: str = "llama3.2"
     OLLAMA_EMBED_MODEL: str = "nomic-embed-text"
 
+    # LLM_MODE: mock | ollama | azure_openai
+    # mock = no external LLM call, returns canned/templated responses (fastest dev loop)
+    LLM_MODE: str = "mock"
+
     LANGCHAIN_TRACING_V2: bool = False
     LANGCHAIN_API_KEY: str = ""
     LANGCHAIN_PROJECT: str = "att-account-platform"

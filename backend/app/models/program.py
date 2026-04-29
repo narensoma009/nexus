@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, DateTime, Text, Integer
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, ForeignKey, DateTime, Text, Integer, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -9,7 +8,7 @@ from app.models.base import Base
 
 class Program(Base):
     __tablename__ = "programs"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     account_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("accounts.id"))
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
@@ -21,7 +20,7 @@ class Program(Base):
 
 class Project(Base):
     __tablename__ = "projects"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     program_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("programs.id"))
     name: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(50), default="on_track")
@@ -31,7 +30,7 @@ class Project(Base):
 
 class Workstream(Base):
     __tablename__ = "workstreams"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     project_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("projects.id"))
     name: Mapped[str] = mapped_column(String(255))
     status: Mapped[str] = mapped_column(String(50), default="on_track")
@@ -41,7 +40,7 @@ class Workstream(Base):
 
 class ResourceAssignment(Base):
     __tablename__ = "resource_assignments"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     resource_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("resources.id"))
     workstream_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("workstreams.id"))
     role: Mapped[str] = mapped_column(String(255))

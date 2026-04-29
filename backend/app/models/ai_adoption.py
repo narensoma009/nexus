@@ -1,7 +1,6 @@
 import uuid
 from datetime import datetime
-from sqlalchemy import String, ForeignKey, DateTime, Integer
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import String, ForeignKey, DateTime, Integer, Uuid
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.models.base import Base
@@ -9,7 +8,7 @@ from app.models.base import Base
 
 class AITool(Base):
     __tablename__ = "ai_tools"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     name: Mapped[str] = mapped_column(String(255))
     vendor: Mapped[str] = mapped_column(String(255))
     category: Mapped[str] = mapped_column(String(100))
@@ -20,7 +19,7 @@ class AITool(Base):
 
 class AIToolLicense(Base):
     __tablename__ = "ai_tool_licenses"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     tool_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("ai_tools.id"))
     resource_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("resources.id"))
     assigned_date: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -30,7 +29,7 @@ class AIToolLicense(Base):
 
 class AIToolUsage(Base):
     __tablename__ = "ai_tool_usages"
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid.uuid4)
     tool_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("ai_tools.id"))
     resource_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("resources.id"))
     recorded_date: Mapped[datetime] = mapped_column(DateTime)
