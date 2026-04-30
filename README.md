@@ -1,6 +1,6 @@
 #  Account Platform (Nexus)
 
-Internal web platform for the Accenture AT&T account: programs, portfolios, teams,
+Internal web platform for the  account: programs, portfolios, teams,
 resources, AI adoption tracking, PPT generation, and conversational AI.
 
 ## Stack
