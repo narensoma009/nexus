@@ -12,6 +12,10 @@ resources, AI adoption tracking, PPT generation, and conversational AI.
 
 ## Local setup
 
+Use **Python 3.11 or 3.12** for the backend. Newer Python versions may not ship
+pre-built wheels for dependencies such as numpy on Windows, which forces a local
+compile and fails without Visual Studio Build Tools.
+
 ```bash
 # 1. Start infra
 docker-compose up postgres ollama -d
@@ -22,14 +26,18 @@ docker-compose exec ollama ollama pull nomic-embed-text
 
 # 3. Backend
 cd backend
-python -m venv venv && source venv/bin/activate
+# Linux/macOS:
+python3.12 -m venv venv && source venv/bin/activate
+# Windows (recommended when multiple Pythons are installed):
+#   py -3.12 -m venv venv
+#   .\venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 cp .env.example .env
 alembic upgrade head
 uvicorn app.main:app --reload --port 8000
 
 # 4. Frontend
-cd frontend
+cd ../frontend
 npm install
 cp .env.example .env
 npm run dev   # http://localhost:5173

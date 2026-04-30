@@ -254,7 +254,15 @@ async def seed_programs(
     return programs
 
 
-async def seed_ai_adoption(db: AsyncSession, resources: list[Resource]):
+async def seed_ai_adoption(db: AsyncSession, resources: list[Resource], teams: list[Team]):
+    """Per-portfolio adoption profiles so the dashboard shows realistic variance.
+
+    Profile knobs per portfolio:
+      - license_rate:     fraction of resources who hold any license to a given tool
+      - stage_weights:    distribution of adoption stages (piloting/onboarded/active/embedded)
+      - tool_affinity:    multiplier per tool (1.0 = baseline, >1 = heavier use)
+      - daily_active_pct: fraction of licensed users showing daily activity
+    """
     tool_specs = [
         ("GitHub Copilot", "GitHub", "code_assist"),
         ("Claude Code", "Anthropic", "agentic"),
@@ -272,48 +280,139 @@ async def seed_ai_adoption(db: AsyncSession, resources: list[Resource]):
     ]
     db.add_all(tools)
     await db.flush()
+    tools_by_name = {t.name: t for t in tools}
+
+    # Resolve portfolio for each resource via team → portfolio (handles sub_portfolio nesting)
+    teams_by_id = {t.id: t for t in teams}
+    sub_portfolio_lookup: dict = {}
+    if teams:
+        from app.models.hierarchy import SubPortfolio as _SP
+        sps = (await db.execute(select(_SP))).scalars().all()
+        sub_portfolio_lookup = {sp.id: sp.portfolio_id for sp in sps}
+
+    def resource_portfolio(r: Resource) -> str:
+        team = teams_by_id.get(r.team_id)
+        if not team:
+            return "Unknown"
+        # walk up parent_team chain
+        while team and team.parent_team_id:
+            team = teams_by_id.get(team.parent_team_id) or team
+            if not team.parent_team_id:
+                break
+        if team.portfolio_id:
+            return _portfolio_name_by_id(portfolios_by_id, team.portfolio_id)
+        if team.sub_portfolio_id:
+            pid = sub_portfolio_lookup.get(team.sub_portfolio_id)
+            return _portfolio_name_by_id(portfolios_by_id, pid)
+        return "Unknown"
+
+    # Pull portfolios into a lookup
+    from app.models.hierarchy import Portfolio as _P
+    portfolios = (await db.execute(select(_P))).scalars().all()
+    portfolios_by_id = {p.id: p for p in portfolios}
+
+    # Bucket resources by portfolio
+    resources_by_portfolio: dict[str, list[Resource]] = {}
+    for r in resources:
+        key = resource_portfolio(r)
+        resources_by_portfolio.setdefault(key, []).append(r)
+
+    # Profiles — Enterprise leads, Consumer mid, Network lagging
+    profiles: dict[str, dict] = {
+        "Enterprise": {
+            "license_rate": 0.85,
+            "stage_weights": [1, 2, 4, 4],   # piloting, onboarded, active, embedded
+            "tool_affinity": {
+                "GitHub Copilot": 1.0,
+                "Claude Code": 1.2,
+                "Cursor": 0.9,
+                "ChatGPT Enterprise": 1.3,
+                "Databricks Genie": 1.5,
+            },
+            "daily_active_pct": 0.7,
+        },
+        "Consumer": {
+            "license_rate": 0.65,
+            "stage_weights": [2, 3, 3, 1],
+            "tool_affinity": {
+                "GitHub Copilot": 1.2,
+                "Claude Code": 0.8,
+                "Cursor": 1.0,
+                "ChatGPT Enterprise": 1.0,
+                "Databricks Genie": 0.4,
+            },
+            "daily_active_pct": 0.55,
+        },
+        "Network": {
+            "license_rate": 0.40,
+            "stage_weights": [4, 3, 2, 1],
+            "tool_affinity": {
+                "GitHub Copilot": 1.0,
+                "Claude Code": 0.6,
+                "Cursor": 0.6,
+                "ChatGPT Enterprise": 0.7,
+                "Databricks Genie": 0.3,
+            },
+            "daily_active_pct": 0.40,
+        },
+    }
+    default_profile = profiles["Consumer"]
 
     license_count = 0
-    for tool in tools:
-        # Each tool licensed to 30-70% of resources
-        sample_size = max(1, int(len(resources) * random.uniform(0.3, 0.7)))
-        sampled = random.sample(resources, sample_size)
-        for r in sampled:
-            lic = AIToolLicense(
-                tool_id=tool.id,
-                resource_id=r.id,
-                assigned_date=datetime.utcnow() - timedelta(days=random.randint(7, 365)),
-                adoption_stage=random.choices(
-                    ["piloting", "onboarded", "active", "embedded"],
-                    weights=[1, 2, 3, 2],
-                )[0],
-            )
-            db.add(lic)
-            license_count += 1
+    license_records: list[tuple[Resource, AITool]] = []
 
-    # Usage data: last 30 days
-    usage_count = 0
-    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
-    for tool in tools:
-        active_users = random.sample(resources, k=int(len(resources) * 0.4))
-        for day_offset in range(30):
-            day = today - timedelta(days=day_offset)
-            # Sample subset of users per day
-            daily = random.sample(active_users, k=int(len(active_users) * random.uniform(0.4, 0.9)))
-            for r in daily:
-                u = AIToolUsage(
+    for portfolio_name, members in resources_by_portfolio.items():
+        profile = profiles.get(portfolio_name, default_profile)
+        for tool in tools:
+            affinity = profile["tool_affinity"].get(tool.name, 1.0)
+            rate = min(0.95, profile["license_rate"] * affinity)
+            sample_size = max(1, int(len(members) * rate))
+            sampled = random.sample(members, k=min(sample_size, len(members)))
+            for r in sampled:
+                stage = random.choices(
+                    ["piloting", "onboarded", "active", "embedded"],
+                    weights=profile["stage_weights"],
+                )[0]
+                lic = AIToolLicense(
                     tool_id=tool.id,
                     resource_id=r.id,
-                    recorded_date=day,
-                    sessions=random.randint(1, 12),
-                    active_minutes=random.randint(5, 240),
-                    source="api" if random.random() > 0.3 else "manual",
+                    assigned_date=datetime.utcnow() - timedelta(days=random.randint(7, 365)),
+                    adoption_stage=stage,
                 )
-                db.add(u)
-                usage_count += 1
+                db.add(lic)
+                license_count += 1
+                license_records.append((r, tool))
+
+    # Usage events: last 30 days, weighted by portfolio activity
+    usage_count = 0
+    today = datetime.utcnow().replace(hour=0, minute=0, second=0, microsecond=0)
+    for r, tool in license_records:
+        portfolio_name = resource_portfolio(r)
+        profile = profiles.get(portfolio_name, default_profile)
+        for day_offset in range(30):
+            if random.random() > profile["daily_active_pct"]:
+                continue
+            day = today - timedelta(days=day_offset)
+            u = AIToolUsage(
+                tool_id=tool.id,
+                resource_id=r.id,
+                recorded_date=day,
+                sessions=random.randint(1, 12),
+                active_minutes=random.randint(5, 240),
+                source="api" if random.random() > 0.3 else "manual",
+            )
+            db.add(u)
+            usage_count += 1
 
     await db.flush()
+    breakdown = ", ".join(f"{k}={len(v)}" for k, v in resources_by_portfolio.items())
     print(f"[ai_adoption] {len(tools)} tools, {license_count} licenses, {usage_count} usage events")
+    print(f"[ai_adoption] resources by portfolio: {breakdown}")
+
+
+def _portfolio_name_by_id(portfolios_by_id: dict, pid) -> str:
+    p = portfolios_by_id.get(pid)
+    return p.name if p else "Unknown"
 
 
 async def seed_user_role(db: AsyncSession, oid: str | None):
@@ -350,7 +449,7 @@ async def main():
         account, portfolios, teams = await seed_hierarchy(db)
         resources = await seed_resources(db, teams)
         await seed_programs(db, account, resources)
-        await seed_ai_adoption(db, resources)
+        await seed_ai_adoption(db, resources, teams)
         await seed_user_role(db, args.my_oid)
 
         await db.commit()

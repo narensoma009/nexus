@@ -41,7 +41,7 @@ export function ChatPanel({
   return (
     <div className="fixed top-0 right-0 h-full w-96 bg-white border-l border-slate-200 shadow-xl flex flex-col z-50">
       <div className="flex items-center justify-between p-3 border-b border-slate-200">
-        <div className="font-semibold">Platform Assistant</div>
+        <div className="font-semibold">Ask Nexus</div>
         <button onClick={onClose} aria-label="Close" className="text-slate-500 hover:text-slate-800">
           <X size={18} />
         </button>

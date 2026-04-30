@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="AT&T Account Platform API", version="0.1.0", lifespan=lifespan)
+app = FastAPI(title="Nexus API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,

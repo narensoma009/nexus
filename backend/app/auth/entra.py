@@ -10,6 +10,14 @@ from app.database import get_db
 from app.models.resource import UserRole
 
 
+def _dev_entra_unconfigured() -> bool:
+    """True when Entra tenant is missing or still a template value (.env.example)."""
+    tid = (settings.ENTRA_TENANT_ID or "").strip().lower()
+    if not tid:
+        return True
+    return tid in {"your-tenant-id", "tenant-id-here"}
+
+
 @lru_cache(maxsize=1)
 def _jwks_url() -> str:
     return f"https://login.microsoftonline.com/{settings.ENTRA_TENANT_ID}/discovery/v2.0/keys"
@@ -30,7 +38,7 @@ async def _get_jwks() -> dict:
 
 
 async def _validate_token(token: str) -> dict:
-    if settings.ENVIRONMENT == "development" and not settings.ENTRA_TENANT_ID:
+    if settings.ENVIRONMENT == "development" and _dev_entra_unconfigured():
         # Dev shortcut: accept unsigned tokens
         try:
             return jwt.get_unverified_claims(token)

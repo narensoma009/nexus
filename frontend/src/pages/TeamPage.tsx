@@ -2,6 +2,7 @@ import { useParams } from "@tanstack/react-router";
 import { useTeam, useTeamMembers } from "@/hooks/useHierarchyNode";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { RosterTable } from "@/components/resources/RosterTable";
+import { asArray } from "@/utils/array";
 
 export function TeamPage() {
   const { teamId } = useParams({ from: "/teams/$teamId" });
@@ -17,7 +18,7 @@ export function TeamPage() {
 
       <section>
         <h2 className="font-semibold mb-2">Members</h2>
-        <RosterTable rows={members ?? []} />
+        <RosterTable rows={asArray(members)} />
       </section>
     </div>
   );

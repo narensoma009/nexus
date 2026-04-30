@@ -37,3 +37,21 @@ async def download_blob(path: str) -> bytes:
         container = client.get_container_client(settings.AZURE_STORAGE_CONTAINER)
         downloader = await container.download_blob(path)
         return await downloader.readall()
+
+
+async def delete_blob(path: str) -> bool:
+    """Delete a blob. Returns True if removed, False if it didn't exist."""
+    if _is_local():
+        target = _LOCAL_DIR / path
+        if target.exists():
+            target.unlink()
+            return True
+        return False
+
+    async with BlobServiceClient.from_connection_string(settings.AZURE_STORAGE_CONNECTION_STRING) as client:
+        container = client.get_container_client(settings.AZURE_STORAGE_CONTAINER)
+        try:
+            await container.delete_blob(path)
+            return True
+        except Exception:
+            return False

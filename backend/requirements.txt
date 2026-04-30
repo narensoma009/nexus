@@ -1,3 +1,5 @@
+# Python 3.11 or 3.12 recommended. Newer releases (e.g. 3.14) may lack pre-built
+# wheels for numpy and fail on Windows without MSVC / source builds.
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
 pydantic==2.9.2
@@ -6,13 +8,15 @@ sqlalchemy[asyncio]==2.0.35
 asyncpg==0.29.0
 aiosqlite==0.20.0
 alembic==1.13.3
-pgvector==0.3.5
+# langchain-postgres 0.0.12 requires pgvector>=0.2.5,<0.3.0
+pgvector==0.2.5
 email-validator==2.2.0
 python-multipart==0.0.12
 python-jose[cryptography]==3.3.0
 httpx==0.27.2
 azure-storage-blob==12.23.1
 python-pptx==1.0.2
+openpyxl==3.1.5
 langchain==0.3.3
 langchain-core==0.3.10
 langchain-community==0.3.2

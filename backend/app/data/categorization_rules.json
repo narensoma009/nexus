@@ -1,0 +1,42 @@
+[
+  {
+    "program": "5G Core Modernization",
+    "portfolio": "Network",
+    "keywords": ["5g", "core network", "sdn", "nfv", "cloud-native core", "ran"]
+  },
+  {
+    "program": "FirstNet Expansion",
+    "portfolio": "Network",
+    "keywords": ["firstnet", "public safety", "first responder", "fr cell"]
+  },
+  {
+    "program": "Fiber Acceleration",
+    "portfolio": "Consumer",
+    "keywords": ["fiber", "broadband", "ftth", "ont", "olt", "passive optical"]
+  },
+  {
+    "program": "Mobility Modernization",
+    "portfolio": "Consumer",
+    "keywords": ["mobility app", "billing", "device", "myatt", "consumer app"]
+  },
+  {
+    "program": "Enterprise AI Platform",
+    "portfolio": "Enterprise",
+    "keywords": ["ai", "ml", "machine learning", "copilot", "databricks", "llm", "genai", "azure openai"]
+  },
+  {
+    "program": "Enterprise Cloud Migration",
+    "portfolio": "Enterprise",
+    "keywords": ["cloud migration", "lift and shift", "azure", "aws", "kubernetes", "containerization"]
+  },
+  {
+    "program": "Enterprise Security",
+    "portfolio": "Enterprise",
+    "keywords": ["security", "zero trust", "iam", "siem", "soar", "vulnerability", "pentest"]
+  },
+  {
+    "program": "IoT Platform",
+    "portfolio": "Enterprise",
+    "keywords": ["iot", "connected device", "telemetry", "fleet", "asset tracking"]
+  }
+]

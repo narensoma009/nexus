@@ -14,7 +14,7 @@ export function ChatPage() {
 
   return (
     <div className="max-w-3xl mx-auto space-y-4">
-      <h1 className="text-2xl font-semibold">Platform Assistant</h1>
+      <h1 className="text-2xl font-semibold">Ask Nexus</h1>
       <div className="space-y-3 min-h-[300px]">
         {messages.map((m, i) => (
           <div

@@ -1,6 +1,6 @@
 import uuid
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, text
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from sqlalchemy import select, text, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -23,6 +23,67 @@ router = APIRouter()
 @router.get("/programs", response_model=list[ProgramOut])
 async def list_programs(db: AsyncSession = Depends(get_db), user: UserRole = Depends(get_current_user)):
     res = await db.execute(select(Program))
+    return res.scalars().all()
+
+
+@router.get("/programs-with-projects")
+async def list_programs_with_projects(
+    db: AsyncSession = Depends(get_db),
+    user: UserRole = Depends(get_current_user),
+):
+    """Programs with their nested projects + counts. Used by the Programs landing page."""
+    programs = (await db.execute(select(Program))).scalars().all()
+    projects = (await db.execute(select(Project))).scalars().all()
+
+    by_program: dict = {}
+    for proj in projects:
+        by_program.setdefault(str(proj.program_id), []).append({
+            "id": str(proj.id),
+            "name": proj.name,
+            "status": proj.status,
+        })
+
+    return [
+        {
+            "id": str(p.id),
+            "name": p.name,
+            "description": p.description,
+            "status": p.status,
+            "start_date": p.start_date,
+            "end_date": p.end_date,
+            "project_count": len(by_program.get(str(p.id), [])),
+            "projects": by_program.get(str(p.id), []),
+        }
+        for p in programs
+    ]
+
+
+@router.post("/programs/bulk-import-projects")
+async def bulk_import_projects(
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    user: UserRole = Depends(get_current_user),
+):
+    """Upload a CSV or XLSX of projects. Each row is auto-categorized into a Program."""
+    from app.services.project_importer import import_projects
+    contents = await file.read()
+    try:
+        return await import_projects(file.filename or "upload.csv", contents, db)
+    except ValueError as e:
+        raise HTTPException(400, str(e))
+
+
+@router.post("/programs/reload-categorization-rules")
+async def reload_rules(user: UserRole = Depends(get_current_user)):
+    """Re-read categorization rules JSON without restarting the backend."""
+    from app.services.categorization import reload_rules as _reload
+    return {"rules_loaded": _reload()}
+
+
+@router.get("/programs/{program_id}/projects", response_model=list[ProjectOut])
+async def program_projects(program_id: uuid.UUID, db: AsyncSession = Depends(get_db),
+                           user: UserRole = Depends(get_current_user)):
+    res = await db.execute(select(Project).where(Project.program_id == program_id))
     return res.scalars().all()
 
 

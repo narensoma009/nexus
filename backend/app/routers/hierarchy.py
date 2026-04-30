@@ -14,6 +14,8 @@ from app.schemas.hierarchy import (
 )
 from app.schemas.resource import ResourceOut
 from app.utils.hierarchy_utils import get_descendant_team_ids, get_team_ids_under_portfolio
+from sqlalchemy import func
+from app.models.ai_adoption import AITool, AIToolLicense
 
 router = APIRouter()
 
@@ -58,10 +60,158 @@ async def get_tree(db: AsyncSession = Depends(get_db), user: UserRole = Depends(
 @router.get("/portfolios", response_model=list[PortfolioOut])
 async def list_portfolios(
     db: AsyncSession = Depends(get_db),
-    user: UserRole = Depends(require_role(Role.ACCOUNT_ADMIN)),
+    user: UserRole = Depends(get_current_user),
 ):
     res = await db.execute(select(Portfolio))
     return res.scalars().all()
+
+
+def _top_skills(skills_strings: list[str], k: int = 5) -> list[dict]:
+    counts: dict[str, int] = {}
+    for s in skills_strings:
+        if not s:
+            continue
+        for token in s.split(","):
+            token = token.strip()
+            if token:
+                counts[token] = counts.get(token, 0) + 1
+    return [
+        {"skill": name, "count": count}
+        for name, count in sorted(counts.items(), key=lambda x: -x[1])[:k]
+    ]
+
+
+@router.get("/portfolios-summary")
+async def portfolios_summary(
+    db: AsyncSession = Depends(get_db),
+    user: UserRole = Depends(get_current_user),
+):
+    """List of portfolios with aggregate stats — used by the Portfolios landing page."""
+    portfolios = (await db.execute(select(Portfolio))).scalars().all()
+    out: list[dict] = []
+    for p in portfolios:
+        team_ids = await get_team_ids_under_portfolio(db, str(p.id))
+        if team_ids:
+            res_q = await db.execute(
+                select(Resource).where(
+                    Resource.team_id.in_(team_ids), Resource.is_active == True
+                )
+            )
+            resources = list(res_q.scalars().all())
+        else:
+            resources = []
+
+        out.append({
+            "id": str(p.id),
+            "name": p.name,
+            "description": p.description,
+            "team_count": len(team_ids),
+            "resource_count": len(resources),
+            "top_skills": _top_skills([r.skills or "" for r in resources], k=5),
+        })
+    return out
+
+
+@router.get("/portfolios/{portfolio_id}/stats")
+async def portfolio_stats(
+    portfolio_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    user: UserRole = Depends(get_current_user),
+):
+    """Full statistical breakdown for a single portfolio."""
+    portfolio = await db.get(Portfolio, portfolio_id)
+    if not portfolio:
+        raise HTTPException(404, "Portfolio not found")
+
+    team_ids = await get_team_ids_under_portfolio(db, str(portfolio_id))
+    if not team_ids:
+        return {
+            "id": str(portfolio_id),
+            "name": portfolio.name,
+            "description": portfolio.description,
+            "team_count": 0,
+            "resource_count": 0,
+            "roles": [],
+            "seniority": [],
+            "skills": [],
+            "ai_adoption": {"total_licenses": 0, "by_stage": {}, "by_tool": []},
+        }
+
+    resources = list((await db.execute(
+        select(Resource).where(
+            Resource.team_id.in_(team_ids), Resource.is_active == True
+        )
+    )).scalars().all())
+
+    roles: dict[str, int] = {}
+    seniority: dict[str, int] = {}
+    for r in resources:
+        roles[r.role] = roles.get(r.role, 0) + 1
+        seniority[r.seniority] = seniority.get(r.seniority, 0) + 1
+
+    skills = _top_skills([r.skills or "" for r in resources], k=20)
+
+    resource_ids = [r.id for r in resources]
+    if resource_ids:
+        licenses = list((await db.execute(
+            select(AIToolLicense).where(AIToolLicense.resource_id.in_(resource_ids))
+        )).scalars().all())
+    else:
+        licenses = []
+
+    by_stage: dict[str, int] = {}
+    by_tool: dict[uuid.UUID, dict] = {}
+    for l in licenses:
+        by_stage[l.adoption_stage] = by_stage.get(l.adoption_stage, 0) + 1
+        bucket = by_tool.setdefault(l.tool_id, {
+            "piloting": 0, "onboarded": 0, "active": 0, "embedded": 0
+        })
+        bucket[l.adoption_stage] = bucket.get(l.adoption_stage, 0) + 1
+
+    if by_tool:
+        tools = list((await db.execute(
+            select(AITool).where(AITool.id.in_(list(by_tool.keys())))
+        )).scalars().all())
+        tool_map = {t.id: t for t in tools}
+        tool_breakdown = [
+            {
+                "tool_id": str(tid),
+                "name": tool_map[tid].name if tid in tool_map else "Unknown",
+                "vendor": tool_map[tid].vendor if tid in tool_map else "",
+                "stages": stages,
+                "total": sum(stages.values()),
+            }
+            for tid, stages in by_tool.items()
+            if tid in tool_map
+        ]
+        tool_breakdown.sort(key=lambda x: -x["total"])
+    else:
+        tool_breakdown = []
+
+    return {
+        "id": str(portfolio_id),
+        "name": portfolio.name,
+        "description": portfolio.description,
+        "team_count": len(team_ids),
+        "resource_count": len(resources),
+        "roles": [
+            {"role": role, "count": count}
+            for role, count in sorted(roles.items(), key=lambda x: -x[1])
+        ],
+        "seniority": [
+            {"level": level, "count": count}
+            for level, count in sorted(
+                seniority.items(),
+                key=lambda x: ["junior", "mid", "senior", "lead"].index(x[0]) if x[0] in ["junior", "mid", "senior", "lead"] else 99
+            )
+        ],
+        "skills": skills,
+        "ai_adoption": {
+            "total_licenses": len(licenses),
+            "by_stage": by_stage,
+            "by_tool": tool_breakdown,
+        },
+    }
 
 
 @router.post("/portfolios", response_model=PortfolioOut)

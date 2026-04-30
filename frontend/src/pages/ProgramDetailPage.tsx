@@ -7,6 +7,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { PortfolioSpreadMatrix } from "@/components/programs/PortfolioSpreadMatrix";
 import { RosterTable } from "@/components/resources/RosterTable";
 import { DataTable } from "@/components/shared/DataTable";
+import { asArray } from "@/utils/array";
 
 export function ProgramDetailPage() {
   const { programId } = useParams({ from: "/programs/$programId" });
@@ -26,23 +27,20 @@ export function ProgramDetailPage() {
   return (
     <div className="space-y-6">
       <Breadcrumb items={[{ label: "Programs", to: "/" }, { label: program.name }]} />
-      <div className="flex items-start justify-between">
-        <div>
-          <h1 className="text-2xl font-semibold">{program.name}</h1>
-          {program.description && <p className="text-slate-600 mt-1">{program.description}</p>}
-        </div>
-        <StatusBadge status={program.status} />
+      <div>
+        <h1 className="text-2xl font-semibold">{program.name}</h1>
+        {program.description && <p className="text-slate-600 mt-1">{program.description}</p>}
       </div>
 
       <section>
         <h2 className="font-semibold mb-2">Portfolio spread</h2>
-        <PortfolioSpreadMatrix entries={spread ?? []} />
+        <PortfolioSpreadMatrix entries={asArray(spread)} />
       </section>
 
       <section>
         <h2 className="font-semibold mb-2">Workstreams</h2>
         <DataTable
-          rows={workstreams ?? []}
+          rows={asArray(workstreams)}
           columns={[
             { key: "name", label: "Name" },
             { key: "status", label: "Status", render: (r: any) => <StatusBadge status={r.status} /> },
@@ -52,7 +50,7 @@ export function ProgramDetailPage() {
 
       <section>
         <h2 className="font-semibold mb-2">Resources</h2>
-        <RosterTable rows={resources ?? []} />
+        <RosterTable rows={asArray(resources)} />
       </section>
     </div>
   );

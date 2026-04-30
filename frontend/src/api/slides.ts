@@ -2,6 +2,9 @@ import { api } from "./client";
 
 export const fetchTemplates = () => api.get("/api/slides/templates").then((r) => r.data);
 
+export const deleteTemplate = (id: string) =>
+  api.delete(`/api/slides/templates/${id}`).then((r) => r.data);
+
 export const uploadTemplate = (file: File, name: string, tags: string) => {
   const fd = new FormData();
   fd.append("file", file);

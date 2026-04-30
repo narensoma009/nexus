@@ -9,6 +9,20 @@ from app.models.embeddings import DocumentEmbedding, USE_PGVECTOR
 from app.agents.base import get_embeddings
 
 
+async def delete_embeddings_for_entity(
+    db: AsyncSession, entity_type: str, entity_id: uuid.UUID
+) -> int:
+    """Remove all embeddings tied to a specific entity. Returns rows deleted."""
+    res = await db.execute(
+        delete(DocumentEmbedding).where(
+            DocumentEmbedding.entity_type == entity_type,
+            DocumentEmbedding.entity_id == entity_id,
+        )
+    )
+    await db.commit()
+    return res.rowcount or 0
+
+
 async def upsert_embedding(db: AsyncSession, entity_type: str, entity_id: uuid.UUID, content: str):
     embeddings = get_embeddings()
     vec = await embeddings.aembed_query(content)

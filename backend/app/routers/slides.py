@@ -14,7 +14,8 @@ from app.models.slides import PPTTemplate
 from app.models.resource import UserRole
 from app.schemas.slides import PPTTemplateOut, GenerateSlidesRequest, JobStatus
 from app.services.ppt_service import extract_placeholders, populate_template
-from app.services.blob_service import upload_blob, download_blob
+from app.services.blob_service import upload_blob, download_blob, delete_blob
+from app.services.embedding_service import delete_embeddings_for_entity
 
 router = APIRouter()
 
@@ -74,12 +75,24 @@ async def delete_template(
     template_id: uuid.UUID, db: AsyncSession = Depends(get_db),
     user: UserRole = Depends(require_role(Role.PM)),
 ):
+    """Cascading delete: removes the DB row, the blob, and any embeddings tied to it."""
     t = await db.get(PPTTemplate, template_id)
     if not t:
         raise HTTPException(404, "Template not found")
+
+    blob_path = t.blob_path
+    blob_removed = await delete_blob(blob_path) if blob_path else False
+    embeddings_removed = await delete_embeddings_for_entity(db, "ppt_template", template_id)
+
     await db.delete(t)
     await db.commit()
-    return {"deleted": True}
+
+    return {
+        "deleted": True,
+        "id": str(template_id),
+        "blob_removed": blob_removed,
+        "embeddings_removed": embeddings_removed,
+    }
 
 
 async def _run_generation_job(job_id: str, request: GenerateSlidesRequest):

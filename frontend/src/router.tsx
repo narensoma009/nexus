@@ -8,6 +8,7 @@ import { AppShell } from "./components/layout/AppShell";
 import { AuthGate } from "./auth/AuthProvider";
 import { ProgramsPage } from "./pages/ProgramsPage";
 import { ProgramDetailPage } from "./pages/ProgramDetailPage";
+import { PortfoliosPage } from "./pages/PortfoliosPage";
 import { PortfolioPage } from "./pages/PortfolioPage";
 import { TeamPage } from "./pages/TeamPage";
 import { ResourcePage } from "./pages/ResourcePage";
@@ -35,6 +36,11 @@ const programDetailRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/programs/$programId",
   component: ProgramDetailPage,
+});
+const portfoliosRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/portfolios",
+  component: PortfoliosPage,
 });
 const portfolioRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -75,6 +81,7 @@ const adminRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   programDetailRoute,
+  portfoliosRoute,
   portfolioRoute,
   teamRoute,
   resourceRoute,

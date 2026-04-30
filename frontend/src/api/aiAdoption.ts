@@ -1,6 +1,16 @@
 import { api } from "./client";
 
-export const fetchTools = () => api.get("/api/ai-adoption/tools").then((r) => r.data);
-export const fetchSummary = () => api.get("/api/ai-adoption/summary").then((r) => r.data);
-export const fetchHeatmap = () => api.get("/api/ai-adoption/heatmap").then((r) => r.data);
-export const fetchTrends = () => api.get("/api/ai-adoption/trends").then((r) => r.data);
+const params = (portfolioId?: string) =>
+  portfolioId ? { portfolio_id: portfolioId } : {};
+
+export const fetchTools = (portfolioId?: string) =>
+  api.get("/api/ai-adoption/tools", { params: params(portfolioId) }).then((r) => r.data);
+
+export const fetchSummary = (portfolioId?: string) =>
+  api.get("/api/ai-adoption/summary", { params: params(portfolioId) }).then((r) => r.data);
+
+export const fetchHeatmap = (portfolioId?: string) =>
+  api.get("/api/ai-adoption/heatmap", { params: params(portfolioId) }).then((r) => r.data);
+
+export const fetchTrends = (portfolioId?: string) =>
+  api.get("/api/ai-adoption/trends", { params: params(portfolioId) }).then((r) => r.data);

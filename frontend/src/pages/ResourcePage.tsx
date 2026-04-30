@@ -4,6 +4,7 @@ import { fetchResource, fetchResourceAssignments } from "@/api/resources";
 import { Breadcrumb } from "@/components/layout/Breadcrumb";
 import { DataTable } from "@/components/shared/DataTable";
 import { AllocationBar } from "@/components/resources/AllocationBar";
+import { asArray } from "@/utils/array";
 
 export function ResourcePage() {
   const { resourceId } = useParams({ from: "/resources/$resourceId" });
@@ -30,7 +31,7 @@ export function ResourcePage() {
       <section>
         <h2 className="font-semibold mb-2">Assignments</h2>
         <DataTable
-          rows={assignments ?? []}
+          rows={asArray(assignments)}
           columns={[
             { key: "role", label: "Role" },
             {
